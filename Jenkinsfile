@@ -46,5 +46,6 @@ pipeline {
         sh 'docker push tejtejas/healthcare:1.0'
             }
         }
+    
       }
 }
