@@ -1,13 +1,10 @@
-pipeline {
+ pipeline {
   agent any
      tools {
        maven 'M2_HOME'
            }
-       environment {
-        AWS_ACCESS_KEY_ID - credentials('aws-access-key-id')
-        AWS_SECRET_ACCESS_KEY - credentials('aws-secret-access-key') 
-     }
-  stages {
+   
+       stages {
     stage('Git Checkout') {
       steps {
         echo 'This stage is to clone the repo from github'
@@ -40,12 +37,47 @@ pipeline {
             } 
       }
   }
-  stage('Docker Push-Image') {
+    stage('Docker Push-Image') {
       steps {
         echo 'This stage will push my new image to the dockerhub'
         sh 'docker push tejtejas/healthcare:1.0'
             }
         }
-    
+    stage('AWS-Login') {
+      steps {
+        withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'awsaccess', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+            }
+          }
+        }
+
+    stage('Terraform Operations for test workspace') {
+      steps {
+        script {
+          sh '''
+            terraform workspace select test || terraform workspace new test
+            terraform init
+            terraform plan
+            terraform destroy -auto-approve
+          '''
+        }
+      }
+    }
+    stage('Terraform destroy & apply for test workspace') {
+      steps {
+        sh 'terraform apply -auto-approve'
+      }
+    }
+    stage('get kubeconfig') {
+      steps {
+        sh 'aws eks update-kubeconfig --region ap-south-1 --name test-cluster'
+        sh 'kubectl get nodes'
+      }
+    }
+    stage('Deploying the application') {
+      steps {
+        sh 'kubectl apply -f app-deploy.yml'
+        sh 'kubectl get svc'
+      }
+    }
       }
 }
