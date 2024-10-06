@@ -12,6 +12,6 @@ locals {
   }
 
   provider "aws" {
-    region - "sp-south-1"
+    region - "ap-south-1"
  }
    
